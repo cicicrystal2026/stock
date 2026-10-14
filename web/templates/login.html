@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>优选决策台 · 登录</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --ink:#1a2233; --muted:#7a8296; --line:#e7eaf0;
+    --brand:#20335e; --accent:#4a6cf7; --up:#d64541; --down:#1d9e75;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#1b2a4d 0%,#20335e 45%,#34507f 100%);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    color:var(--ink);padding:20px}
+  .card{width:100%;max-width:380px;background:#fff;border-radius:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,.28);padding:40px 36px}
+  .logo{width:52px;height:52px;border-radius:13px;margin:0 auto 18px;
+    background:linear-gradient(135deg,#20335e,#4a6cf7);display:flex;align-items:center;
+    justify-content:center;color:#fff;font-weight:700;font-size:24px}
+  h1{font-size:20px;font-weight:600;text-align:center;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:12.5px;text-align:center;margin:6px 0 26px}
+  label{font-size:13px;color:var(--ink);font-weight:500;display:block;margin-bottom:7px}
+  input{width:100%;height:44px;border:1px solid var(--line);border-radius:10px;
+    padding:0 14px;font-size:15px;outline:none;transition:border .15s}
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(74,108,247,.12)}
+  button{width:100%;height:44px;margin-top:20px;border:none;border-radius:10px;
+    background:linear-gradient(135deg,#20335e,#4a6cf7);color:#fff;font-size:15px;
+    font-weight:600;cursor:pointer;letter-spacing:2px}
+  button:hover{opacity:.94}
+  .err{background:#fdeeee;color:var(--up);border:1px solid #f3c3c0;border-radius:8px;
+    padding:9px 12px;font-size:13px;margin-bottom:16px;text-align:center}
+  .foot{color:#9aa8c7;font-size:12px;text-align:center;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">优</div>
+  <h1>优选决策台</h1>
+  <div class="sub">清风火种 · 每日选股 ｜ 仅限本人访问</div>
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  <form method="post" action="{{ url_for('login') }}">
+    <label>访问密码</label>
+    <input type="password" name="password" placeholder="请输入访问密码" autofocus autocomplete="current-password">
+    <button type="submit">进入看板</button>
+  </form>
+  <div class="foot">stock.migucomi.com · 数据仅供个人研究参考</div>
+</div>
+</body>
+</html>

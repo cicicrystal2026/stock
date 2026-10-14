@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>优选决策台 · 每日选股看板</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --ink:#1a2233; --muted:#7a8296;
+    --line:#e7eaf0; --line2:#d5dae4;
+    --brand:#20335e; --brand2:#34507f; --accent:#4a6cf7;
+    --up:#d64541; --upbg:#fdeeee; --down:#1d9e75; --downbg:#eaf6f1;
+    --warn:#c07a1a; --warnbg:#fdf3e3; --gold:#b8860b;
+    --chip:#eef1f6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 24px 60px}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;
+    padding:6px 2px 18px;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#20335e,#4a6cf7);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px}
+  .brand h1{font-size:20px;font-weight:600;letter-spacing:.5px}
+  .brand .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .pill{background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:5px 12px;font-size:12.5px;color:var(--muted)}
+  .pill b{color:var(--ink);font-weight:600}
+  .pill a{color:var(--accent);text-decoration:none;font-weight:500}
+  .pill.live{color:var(--down);border-color:#bfe4d4}
+  .pill.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
+    background:var(--down);margin-right:6px;vertical-align:1px}
+
+  .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .kpi .label{color:var(--muted);font-size:12.5px;margin-bottom:8px}
+  .kpi .num{font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1}
+  .kpi .num small{font-size:14px;font-weight:500;color:var(--muted);margin-left:2px}
+  .kpi .foot{font-size:12px;color:var(--muted);margin-top:8px}
+  .kpi .num.up{color:var(--up)} .kpi .num.down{color:var(--down)}
+  .kpi .num.zero{color:var(--ink)} .kpi .num.warn{color:var(--warn)}
+  .kpi.accent{border-top:3px solid var(--accent)}
+
+  .cols{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+  @media(max-width:980px){.cols{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;overflow:hidden}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;border-bottom:1px solid var(--line)}
+  .panel-h h2{font-size:15px;font-weight:600}
+  .panel-h .hint{font-size:12px;color:var(--muted)}
+  .panel-b{padding:14px 18px}
+
+  .tag{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:6px}
+  .tag.A{background:#fdeeee;color:var(--up)}
+  .tag.B{background:#fdf3e3;color:var(--warn)}
+  .tag.C{background:#eef1f6;color:#5a6478}
+  .tag.N{background:#f0f0f0;color:#9aa2b1}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:right;font-weight:500;color:var(--muted);font-size:12px;
+    padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  td{padding:9px 10px;border-bottom:1px solid #f1f3f7;text-align:right;white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  .code{font-family:"SF Mono",Consolas,monospace;color:var(--muted);font-size:12.5px}
+  .name{font-weight:500}
+  .ind{color:var(--muted);font-size:12px}
+  .up{color:var(--up);font-weight:600} .down{color:var(--down);font-weight:600}
+  .flat{color:var(--muted)}
+
+  .hero{border:1px solid #f0d7a8;background:linear-gradient(180deg,#fffdf7,#fff);
+    border-radius:12px;padding:16px;margin-bottom:8px}
+  .hero .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .hero .nm{font-size:17px;font-weight:700}
+  .hero .chg{font-size:16px;font-weight:700}
+  .hero .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:600px){.hero .metrics{grid-template-columns:repeat(2,1fr)}}
+  .hero .m{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .hero .m .k{font-size:11.5px;color:var(--muted)} .hero .m .v{font-size:15px;font-weight:600;margin-top:3px}
+  .hero .extra{font-size:12px;color:var(--muted);margin-top:10px}
+  .alertbar{display:flex;align-items:center;gap:8px;background:var(--downbg);
+    border:1px solid #bfe4d4;color:var(--down);border-radius:8px;
+    padding:9px 12px;font-size:12.5px;margin-top:12px}
+  .alertbar.warn{background:var(--warnbg);border-color:#efd9a8;color:var(--warn)}
+
+  .bar-row{display:grid;grid-template-columns:72px 1fr 34px;gap:10px;align-items:center;margin:7px 0}
+  .bar-row .k{font-size:12px;color:var(--muted);text-align:right}
+  .bar-track{background:#f0f2f6;border-radius:5px;height:14px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#4a6cf7,#6d8bff)}
+  .bar-row .v{font-size:12px;color:var(--ink);font-weight:600}
+
+  .empty{color:var(--muted);font-size:13px;padding:18px 4px;text-align:center}
+  .foot{color:var(--muted);font-size:11.5px;margin-top:18px;text-align:center;line-height:1.7}
+  .section-tip{font-size:12px;color:var(--muted);padding:2px 0 10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+{% if not screen %}
+  <div class="panel"><div class="panel-b">
+    <div class="empty" style="padding:60px 0;font-size:15px">
+      尚未生成扫描数据。<br><br>请先在服务器上运行更新脚本（抓数 + 扫描），或点击「手动更新」。
+    </div>
+  </div></div>
+  <div class="foot">优选决策台 · stock.migucomi.com</div>
+{% else %}
+
+{% set s1 = screen.candidates.s1 %}
+{% set s2 = screen.candidates.s2 %}
+{% set warn_codes = screen.flow_warn | map(attribute='code') | list %}
+{% set a_total = screen.kpi.s1.A + screen.kpi.s2.A %}
+{% set b_total = screen.kpi.s1.B + screen.kpi.s2.B %}
+{% set c_total = screen.kpi.s1.C + screen.kpi.s2.C %}
+{% set c_all = (s1.C + s2.C) | sort(attribute='f62e', reverse=True) %}
+
+{% macro numcls(v) %}{% if v > 0 %}up{% elif v < 0 %}down{% else %}flat{% endif %}{% endmacro %}
+{% macro pct(v) %}{% if v is not none %}{{ "%.2f"|format(v) }}%{% else %}—{% endif %}{% endmacro %}
+{% macro fnum(v) %}{% if v is not none %}{{ "%.2f"|format(v) }}{% else %}—{% endif %}{% endmacro %}
+
+  <header>
+    <div class="brand">
+      <div class="logo">优</div>
+      <div>
+        <h1>优选决策台</h1>
+        <div class="sub">清风火种 · 每日选股 ｜ 持股周期 1–2 周</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="pill"><b>{{ screen.meta.date }}</b> {{ screen.meta.weekday }} · 收盘后</span>
+      <span class="pill live">数据已更新</span>
+      <span class="pill">池子 <b>{{ screen.meta.pool_count }}</b> 只 · 有效 <b>{{ screen.meta.valid_count }}</b></span>
+      <span class="pill"><a href="{{ url_for('pool_page') }}">管理池子</a></span>
+      <span class="pill"><a href="{{ url_for('logout') }}">退出</a></span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card kpi accent">
+      <div class="label">今日符合买点（A 档）</div>
+      <div class="num {{ 'zero' if a_total == 0 else 'up' }}">{{ a_total }}<small>只</small></div>
+      <div class="foot">{% if a_total %}两策略严格信号{% else %}两策略严格信号均为空{% endif %}</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">放量突破（B 档）</div>
+      <div class="num {{ 'warn' if b_total else 'zero' }}">{{ b_total }}<small>只</small></div>
+      <div class="foot">{% if screen.kpi.flow_warn %}{{ screen.kpi.flow_warn }} 只伴随主力净流出{% else %}无资金背离{% endif %}</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">观察池（C 档）</div>
+      <div class="num">{{ c_total }}<small>只</small></div>
+      <div class="foot">策略一 {{ screen.kpi.s1.C }} · 策略二 {{ screen.kpi.s2.C }}</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">资金面警示</div>
+      <div class="num {{ 'down' if screen.kpi.flow_warn else 'zero' }}">{{ screen.kpi.flow_warn }}<small>只</small></div>
+      <div class="foot">技术面 vs 资金面背离</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">池内主力净流入为正</div>
+      <div class="num up">{{ screen.meta.flow_positive }}<small>/{{ screen.meta.flow_total }}</small></div>
+      <div class="foot">约 {{ (screen.meta.flow_positive / screen.meta.flow_total * 100) | round(0) | int }}% 的标的有资金进场</div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="panel">
+        <div class="panel-h">
+          <h2>今日候选</h2>
+          <span class="hint">技术面判定 · 不校验基本面前提</span>
+        </div>
+        <div class="panel-b">
+
+          <div class="section-tip"><b>A 档 · 严格符合买点</b>（策略一 8 项全中 / 策略二 5 项全中）</div>
+          {% if a_total == 0 %}
+          <div class="empty">今日无严格买点信号。市场普遍缩量，等待放量确认。</div>
+          {% else %}
+            {% for r in s1.A %}{% set strat='策略一 · 250日线' %}{% set mx=8 %}{% set tier='A' %}
+              <div class="hero">
+                <div class="top"><span class="nm">{{ r.name }}</span><span class="code">{{ r.code }}</span>
+                  <span class="ind">{{ r.industry }}</span><span class="tag A">{{ strat }} · 评分 {{ r.score }}/{{ mx }}</span></div>
+                <div class="metrics">
+                  <div class="m"><div class="k">收盘</div><div class="v">{{ fnum(r.close) }}</div></div>
+                  <div class="m"><div class="k">当日涨跌</div><div class="v {{ numcls(r.chg) }}">{{ "%+.2f"|format(r.chg) }}%</div></div>
+                  <div class="m"><div class="k">量比</div><div class="v">{{ fnum(r.vratio) }}</div></div>
+                  <div class="m"><div class="k">主力净流入</div><div class="v {{ numcls(r.f62e) }}">{{ "%+.2f"|format(r.f62e) }} 亿</div></div>
+                </div>
+                <div class="extra">250日线 {{ fnum(r.ma250) }} · 距线 {{ "%+.1f"|format(r.dist250) }}% · 止损 {{ fnum(r.stop) }}</div>
+                {% if r.code in warn_codes %}<div class="alertbar warn">⚠ 放量上涨但主力净流出 {{ "%+.2f"|format(r.f62e) }} 亿——大资金出货、散户接盘，暂缓。</div>{% endif %}
+              </div>
+            {% endfor %}
+            {% for r in s2.A %}{% set strat='策略二 · 均线多头' %}{% set mx=5 %}{% set tier='A' %}
+              <div class="hero">
+                <div class="top"><span class="nm">{{ r.name }}</span><span class="code">{{ r.code }}</span>
+                  <span class="ind">{{ r.industry }}</span><span class="tag A">{{ strat }} · 评分 {{ r.score }}/{{ mx }}</span></div>
+                <div class="metrics">
+                  <div class="m"><div class="k">收盘</div><div class="v">{{ fnum(r.close) }}</div></div>
+                  <div class="m"><div class="k">当日涨跌</div><div class="v {{ numcls(r.chg) }}">{{ "%+.2f"|format(r.chg) }}%</div></div>
+                  <div class="m"><div class="k">量比</div><div class="v">{{ fnum(r.vratio) }}</div></div>
+                  <div class="m"><div class="k">主力净流入</div><div class="v {{ numcls(r.f62e) }}">{{ "%+.2f"|format(r.f62e) }} 亿</div></div>
+                </div>
+                <div class="extra">MA5/10/20 {{ fnum(r.ma5) }} / {{ fnum(r.ma10) }} / {{ fnum(r.ma20) }} · 止损 {{ fnum(r.stop) }}</div>
+                {% if r.code in warn_codes %}<div class="alertbar warn">⚠ 放量上涨但主力净流出 {{ "%+.2f"|format(r.f62e) }} 亿——大资金出货、散户接盘，暂缓。</div>{% endif %}
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <div class="section-tip" style="margin-top:16px"><b>B 档 · 放量突破（核心信号，未全中）</b></div>
+          {% if b_total == 0 %}
+          <div class="empty">今日无放量突破标的。</div>
+          {% else %}
+            {% for r in (s1.B + s2.B) %}
+              {% set strat = '策略一 · 250日线' if r.strategy == 1 else '策略二 · 均线多头' %}
+              {% set mx = 8 if r.strategy == 1 else 5 %}
+              <div class="hero">
+                <div class="top"><span class="nm">{{ r.name }}</span><span class="code">{{ r.code }}</span>
+                  <span class="ind">{{ r.industry }}</span><span class="tag B">{{ strat }} · 评分 {{ r.score }}/{{ mx }}</span></div>
+                <div class="metrics">
+                  <div class="m"><div class="k">收盘</div><div class="v">{{ fnum(r.close) }}</div></div>
+                  <div class="m"><div class="k">当日涨跌</div><div class="v {{ numcls(r.chg) }}">{{ "%+.2f"|format(r.chg) }}%</div></div>
+                  <div class="m"><div class="k">量比</div><div class="v">{{ fnum(r.vratio) }}</div></div>
+                  <div class="m"><div class="k">主力净流入</div><div class="v {{ numcls(r.f62e) }}">{{ "%+.2f"|format(r.f62e) }} 亿</div></div>
+                </div>
+                {% if r.strategy == 1 %}
+                <div class="extra">250日线 {{ fnum(r.ma250) }} · 距线 {{ "%+.1f"|format(r.dist250) }}% · 止损 {{ fnum(r.stop) }}</div>
+                {% else %}
+                <div class="extra">MA5/10/20 {{ fnum(r.ma5) }} / {{ fnum(r.ma10) }} / {{ fnum(r.ma20) }} · 止损 {{ fnum(r.stop) }}</div>
+                {% endif %}
+                {% if r.code in warn_codes %}<div class="alertbar warn">⚠ 放量上涨但主力净流出 {{ "%+.2f"|format(r.f62e) }} 亿——大资金出货、散户接盘，暂缓。</div>{% endif %}
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <div class="section-tip" style="margin-top:16px"><b>C 档 · 观察池</b>（结构到位、等待放量）</div>
+          {% if c_total == 0 %}
+          <div class="empty">今日无观察标的。</div>
+          {% else %}
+          <table>
+            <thead><tr>
+              <th>标的</th><th>行业</th><th>信号</th><th>收盘</th><th>涨跌</th><th>量比</th><th>主力净流入</th>
+            </tr></thead>
+            <tbody>
+              {% for r in c_all %}
+              <tr>
+                <td><span class="name">{{ r.name }}</span> <span class="code">{{ r.code }}</span></td>
+                <td class="ind">{{ r.industry }}</td>
+                <td><span class="tag C">{{ '策略一' if r.strategy == 1 else '策略二' }}</span></td>
+                <td>{{ fnum(r.close) }}</td>
+                <td class="{{ numcls(r.chg) }}">{{ "%+.2f"|format(r.chg) }}%</td>
+                <td>{{ fnum(r.vratio) }}</td>
+                <td class="{{ numcls(r.f62e) }}">{{ "%+.2f"|format(r.f62e) }} 亿</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <div class="section-tip" style="padding-top:10px">红色 = 资金已在进场。C 档仅作观察，须待放量确认后再跟进。</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="panel-h"><h2>股票池画像</h2><span class="hint">{{ screen.meta.pool_count }} 只 · 行业分布</span></div>
+        <div class="panel-b">
+          {% set max_cnt = screen.industry_dist[0].count if screen.industry_dist else 1 %}
+          {% for it in screen.industry_dist[:10] %}
+          <div class="bar-row"><span class="k">{{ it.name }}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:{{ (it.count / max_cnt * 100) | round(1) }}%"></div></div>
+            <span class="v">{{ it.count }}</span></div>
+          {% endfor %}
+          <div class="section-tip" style="padding-top:10px">三条主线：科技自主可控 · AI 算力 · 战略资源</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><h2>策略体检（60 日回放）</h2></div>
+        <div class="panel-b">
+          {% if replay and replay.strategies %}
+          <table>
+            <thead><tr><th>策略</th><th>触发</th><th>5日中位</th><th>5日胜率</th></tr></thead>
+            <tbody>
+              {% for st in replay.strategies %}
+              <tr>
+                <td style="text-align:left">{{ st.title }}</td>
+                <td>{{ st.triggers }}</td>
+                <td class="{{ numcls(st.f5.med) if st.f5 else 'flat' }}">{{ "%+.2f"|format(st.f5.med) }}%{% if not st.f5 %}—{% endif %}</td>
+                <td class="{{ numcls((st.f5.win|int) - 50) if st.f5 else 'flat' }}">{{ st.f5.win|int }}%{% if not st.f5 %}—{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <div class="section-tip" style="padding-top:10px">
+            样本极小，仅作触发频率参考。<br>
+            策略一：低频高盈亏比，靠止损纪律 + 少数暴赚盈利。<br>
+            策略二：近期跑输，需叠加基本面前提 + 市场状态过滤。
+          </div>
+          {% else %}
+          <div class="empty">暂无回放数据。</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><h2>数据源</h2></div>
+        <div class="panel-b">
+          <div class="section-tip" style="line-height:2">
+            池子：顾问核心池（{{ screen.meta.pool_count }} 只）<br>
+            日线：腾讯前复权 · 截至 {{ screen.meta.date }}<br>
+            资金流：东方财富主力净流入<br>
+            策略：清风火种体系（第四步）
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    本看板由本地脚本自动生成，仅作技术面信号的机械判定，不校验基本面前提，不构成投资建议。
+  </div>
+{% endif %}
+</div>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# 运行时生成（含敏感信息 / 可再生）
+data/config.json
+data/pool_history/
+
+# 本地预览产物（静态快照，会过期）
+reports/preview_*.html
+
+# 日志
+logs/
+*.log
+
+# 系统
+.DS_Store
+Thumbs.db

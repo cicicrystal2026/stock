@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>优选决策台 · 池子管理</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#fff; --ink:#1a2233; --muted:#7a8296; --line:#e7eaf0;
+    --brand:#20335e; --accent:#4a6cf7; --up:#d64541; --down:#1d9e75; --warn:#c07a1a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px 24px 60px}
+  header{display:flex;align-items:flex-end;justify-content:space-between;
+    padding:6px 2px 18px;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#20335e,#4a6cf7);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px}
+  .brand h1{font-size:20px;font-weight:600}
+  .brand .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .nav a{color:var(--accent);text-decoration:none;font-size:13px;margin-left:14px}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;overflow:hidden}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;border-bottom:1px solid var(--line)}
+  .panel-h h2{font-size:15px;font-weight:600}
+  .panel-h .hint{font-size:12px;color:var(--muted)}
+  .panel-b{padding:16px 18px}
+
+  .stat{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:4px}
+  .stat .k{color:var(--muted);font-size:12.5px}
+  .stat .v{font-size:26px;font-weight:700}
+  .stat .v b{font-size:14px;font-weight:500;color:var(--muted)}
+
+  textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:10px;
+    padding:12px;font-size:13px;font-family:inherit;resize:vertical;outline:none}
+  textarea:focus{border-color:var(--accent)}
+  .tip{font-size:12px;color:var(--muted);margin:8px 0 12px;line-height:1.7}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  .btn{display:inline-block;border:none;border-radius:9px;padding:9px 18px;font-size:13.5px;
+    font-weight:600;cursor:pointer;letter-spacing:1px;color:#fff}
+  .btn.pri{background:linear-gradient(135deg,#20335e,#4a6cf7)}
+  .btn.danger{background:#d64541}
+  .btn.ghost{background:#eef1f6;color:var(--ink)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .radio{font-size:13px;color:var(--ink);display:flex;align-items:center;gap:6px;cursor:pointer}
+  .radio input{margin:0}
+
+  .search{width:260px;height:36px;border:1px solid var(--line);border-radius:9px;padding:0 12px;font-size:13px;outline:none}
+  .search:focus{border-color:var(--accent)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:8px 10px;border-bottom:1px solid #f1f3f7}
+  tr:last-child td{border-bottom:none}
+  .code{font-family:"SF Mono",Consolas,monospace;color:var(--muted);font-size:12.5px}
+  .name{font-weight:500}
+  .ind{color:var(--muted);font-size:12px}
+  .del{color:var(--up);cursor:pointer;font-size:12.5px;border:none;background:none;font-weight:600}
+
+  .log{background:#161b27;color:#d7e0f2;border-radius:10px;padding:12px 14px;font-size:12px;
+    font-family:"SF Mono",Consolas,monospace;max-height:220px;overflow:auto;white-space:pre-wrap;line-height:1.6}
+  .snap{font-size:12.5px;color:var(--muted);padding:3px 0}
+  .msg{padding:9px 12px;border-radius:8px;font-size:13px;margin:10px 0;display:none}
+  .msg.ok{background:#eaf6f1;color:var(--down);border:1px solid #bfe4d4;display:block}
+  .msg.err{background:#fdeeee;color:var(--up);border:1px solid #f3c3c0;display:block}
+  .empty{color:var(--muted);text-align:center;padding:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">优</div>
+      <div>
+        <h1>池子管理</h1>
+        <div class="sub">顾问核心池 · 增删与版本快照</div>
+      </div>
+    </div>
+    <div class="nav">
+      <a href="{{ url_for('dashboard') }}">← 返回看板</a>
+      <a href="{{ url_for('logout') }}">退出</a>
+    </div>
+  </header>
+
+  <div class="panel">
+    <div class="panel-h"><h2>当前池子</h2><span class="hint">上次更新：<span id="meta-time">—</span></span></div>
+    <div class="panel-b">
+      <div class="stat">
+        <div><div class="k">股票数量</div><div class="v"><span id="count">—</span><b> 只</b></div></div>
+        <div><div class="k">历史快照</div><div class="v"><span id="snap-count">—</span><b> 份</b></div></div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <input class="search" id="q" placeholder="按代码 / 名称 / 行业筛选">
+        <button class="btn ghost" onclick="snapshot()">📸 保存当前快照</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h"><h2>批量导入 / 更换池子</h2><span class="hint">粘贴代码列表，自动补全名称与行业</span></div>
+    <div class="panel-b">
+      <textarea id="import-text" placeholder="支持格式（每行一个，可混合）：&#10;688012&#10;688072 拓荆科技&#10;688082,盛美上海,半导体"></textarea>
+      <div class="tip">
+        · 纯 6 位代码会自动通过东方财富接口补全名称与行业（需联网，约每秒 50 只）。<br>
+        · 「合并」：保留现有池子并新增/覆盖；「全量替换」：清空后只保留本次导入。<br>
+        · 北交所 920xxx 亦支持。
+      </div>
+      <div class="row">
+        <label class="radio"><input type="radio" name="mode" value="merge" checked> 合并到现有池子</label>
+        <label class="radio"><input type="radio" name="mode" value="replace"> 全量替换</label>
+        <button class="btn pri" id="btn-import" onclick="doImport()">导入</button>
+      </div>
+      <div class="msg" id="import-msg"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h"><h2>股票列表</h2><span class="hint" id="list-hint">—</span></div>
+    <div class="panel-b" style="padding:8px 10px">
+      <table>
+        <thead><tr><th style="width:90px">代码</th><th style="width:150px">名称</th><th>行业</th><th style="width:70px"></th></tr></thead>
+        <tbody id="tbody"><tr><td colspan="4" class="empty">加载中…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h"><h2>数据更新</h2><span class="hint">抓取最新行情并重新扫描</span></div>
+    <div class="panel-b">
+      <div class="row">
+        <button class="btn pri" id="btn-run" onclick="runUpdate()">手动更新（抓数 + 扫描）</button>
+        <span class="hint">通常由每日 16:00 定时任务自动执行；手动更新需 3–5 分钟。</span>
+      </div>
+      <div class="log" id="run-log" style="margin-top:12px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let allStocks = [];
+
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401) { location.href = '/login'; throw new Error('未登录'); }
+  return j;
+}
+
+function esc(s){ return (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function render(){
+  const q = (document.getElementById('q').value || '').trim().toLowerCase();
+  const list = allStocks.filter(s => !q ||
+    s.code.includes(q) || s.name.toLowerCase().includes(q) || s.industry.toLowerCase().includes(q));
+  const tb = document.getElementById('tbody');
+  document.getElementById('list-hint').textContent = '显示 ' + list.length + ' / ' + allStocks.length + ' 只';
+  if (!list.length){ tb.innerHTML = '<tr><td colspan="4" class="empty">无匹配结果</td></tr>'; return; }
+  tb.innerHTML = list.map(s =>
+    '<tr><td class="code">' + esc(s.code) + '</td>' +
+    '<td class="name">' + esc(s.name) + '</td>' +
+    '<td class="ind">' + esc(s.industry) + '</td>' +
+    '<td><button class="del" onclick="del(\'' + esc(s.code) + '\')">删除</button></td></tr>'
+  ).join('');
+}
+
+async function loadPool(){
+  const j = await api('/api/pool');
+  allStocks = j.stocks || [];
+  document.getElementById('count').textContent = j.count;
+  document.getElementById('snap-count').textContent = (j.snapshots || []).length;
+  document.getElementById('meta-time').textContent = (j.meta && j.meta.updated_at) || '—';
+  render();
+}
+
+function showMsg(id, ok, text){
+  const el = document.getElementById(id);
+  el.className = 'msg ' + (ok ? 'ok' : 'err');
+  el.textContent = text;
+  setTimeout(() => { el.className = 'msg'; }, 5000);
+}
+
+async function doImport(){
+  const text = document.getElementById('import-text').value;
+  if (!text.trim()){ showMsg('import-msg', false, '请先粘贴代码'); return; }
+  const mode = document.querySelector('input[name=mode]:checked').value;
+  const btn = document.getElementById('btn-import');
+  btn.disabled = true; btn.textContent = '导入中…';
+  try {
+    const j = await api('/api/pool', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text: text, mode: mode})
+    });
+    if (j.ok) {
+      let msg = '已导入 ' + j.added + ' 只，当前池子共 ' + j.count + ' 只。';
+      if (j.unnamed && j.unnamed.length) msg += '（未匹配到名称：' + j.unnamed.join(',') + '）';
+      showMsg('import-msg', true, msg);
+      document.getElementById('import-text').value = '';
+      loadPool();
+    } else {
+      showMsg('import-msg', false, j.error || '导入失败');
+    }
+  } catch(e){ showMsg('import-msg', false, '请求失败'); }
+  btn.disabled = false; btn.textContent = '导入';
+}
+
+async function del(code){
+  if (!confirm('确认从池子删除 ' + code + ' ？')) return;
+  const j = await api('/api/pool/' + code, {method: 'DELETE'});
+  if (j.ok) loadPool(); else alert(j.error || '删除失败');
+}
+
+async function snapshot(){
+  const j = await api('/api/pool/snapshot', {method: 'POST'});
+  if (j.ok){ showMsg('import-msg', true, '快照已保存：' + j.path.split('/').pop()); loadPool(); }
+  else alert(j.error || '快照失败');
+}
+
+let polling = false;
+async function runUpdate(){
+  const btn = document.getElementById('btn-run');
+  const log = document.getElementById('run-log');
+  const j = await api('/api/run', {method: 'POST'});
+  if (!j.ok){ alert(j.error || '启动失败'); return; }
+  btn.disabled = true; btn.textContent = '更新中…';
+  log.style.display = 'block';
+  polling = true;
+  while (polling) {
+    await new Promise(r => setTimeout(r, 2000));
+    const s = await api('/api/run/status');
+    log.textContent = (s.log || []).join('\n');
+    if (!s.running) {
+      btn.disabled = false; btn.textContent = '手动更新（抓数 + 扫描）';
+      polling = false;
+      log.textContent += '\n\n' + (s.error ? '✗ 更新中断于：' + s.error : '✓ 更新完成 ' + (s.finished || ''));
+      break;
+    }
+  }
+}
+
+document.getElementById('q').addEventListener('input', render);
+loadPool();
+</script>
+</body>
+</html>

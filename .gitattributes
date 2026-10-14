@@ -1,0 +1,5 @@
+# 统一行尾：文本走 LF，避免 shell/python 脚本在 Linux 服务器执行时出现 \r 错误
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+*.service text eol=lf

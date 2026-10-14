@@ -1,0 +1,12 @@
+# 优选决策台 · Caddy 反代配置
+# Caddy 自动申请并续期 HTTPS 证书（香港服务器免备案，当天可用）。
+# 访问密码由应用层（Flask 登录）承担，故此处只做反代，不配 basic_auth。
+
+stock.migucomi.com {
+    reverse_proxy 127.0.0.1:8000
+
+    # 简单的访问日志
+    log {
+        output file /var/log/caddy/stock-screener.log
+    }
+}
