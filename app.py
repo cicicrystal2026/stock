@@ -30,6 +30,7 @@ from flask import (Flask, render_template, request, jsonify,
 
 import pool_utils
 from pool_utils import load_pool_list, save_pool, snapshot_pool, get_meta, list_snapshots
+import sim_utils
 
 DATA = os.path.join(BASE, "data")
 CONFIG = os.path.join(DATA, "config.json")
@@ -284,6 +285,120 @@ def api_run():
 @login_required
 def api_run_status():
     return jsonify(RUN)
+
+
+# ---------------- 模拟买入 ----------------
+def _latest_prices():
+    """从日线缓存读每只股票最新收盘价。"""
+    p = os.path.join(DATA, "cache", "daily_330.json")
+    if not os.path.exists(p):
+        return {}
+    try:
+        cache = json.load(open(p, encoding="utf-8"))
+    except Exception:
+        return {}
+    return {code: float(bars[-1][2])
+            for code, bars in cache.get("bars", {}).items() if bars}
+
+
+def _days_between(a, b):
+    try:
+        return max(0, (datetime.date.fromisoformat(b) - datetime.date.fromisoformat(a)).days)
+    except Exception:
+        return 0
+
+
+@app.route("/sim")
+@login_required
+def sim_page():
+    return render_template("sim.html")
+
+
+@app.route("/api/sim")
+@login_required
+def api_sim():
+    acct = sim_utils.load_account()
+    prices = _latest_prices()
+    summary = sim_utils.account_summary(acct, prices)
+    today_s = datetime.date.today().strftime("%Y-%m-%d")
+
+    positions = []
+    for p in acct["positions"]:
+        if p["status"] != "holding":
+            continue
+        px = prices.get(p["code"], p["buy_price"])
+        pnl_pct = (px / p["buy_price"] - 1) * 100
+        positions.append({
+            "code": p["code"], "name": p["name"], "industry": p["industry"],
+            "strategy": p["strategy"], "buy_date": p["buy_date"],
+            "buy_price": p["buy_price"], "shares": p["shares"],
+            "cost": p["cost"], "price": round(px, 2),
+            "pnl": round((px - p["buy_price"]) * p["shares"], 2),
+            "pnl_pct": round(pnl_pct, 2),
+            "stop": p["stop"], "stop_original": p["stop_original"],
+            "protected": p["protected"], "partial_done": p["partial_done"],
+            "take_profit_pct": p["take_profit_pct"],
+            "take_profit_price": round(p["buy_price"] * (1 + p["take_profit_pct"]), 2),
+            "days": _days_between(p["buy_date"], today_s),
+        })
+
+    signal_date = None
+    sp = os.path.join(DATA, "screen_latest.json")
+    if os.path.exists(sp):
+        try:
+            signal_date = json.load(open(sp, encoding="utf-8"))["meta"]["date"]
+        except Exception:
+            pass
+
+    return jsonify({
+        "summary": summary,
+        "positions": positions,
+        "closed": acct["closed"],
+        "signals": sim_utils.get_a_signals(),
+        "signal_date": signal_date,
+    })
+
+
+@app.route("/api/sim/buy", methods=["POST"])
+@login_required
+def api_sim_buy():
+    body = request.get_json(silent=True) or {}
+    code = body.get("code")
+    try:
+        strategy = int(body.get("strategy") or 0)
+    except (TypeError, ValueError):
+        strategy = 0
+    if not code or strategy not in (1, 2):
+        return jsonify({"ok": False, "error": "参数错误"}), 400
+    sig = next((s for s in sim_utils.get_a_signals()
+                if s["code"] == code and s["strategy"] == strategy), None)
+    if not sig:
+        return jsonify({"ok": False, "error": "该标的不在今日 A 档信号中"}), 400
+    acct = sim_utils.load_account()
+    ok, msg, pos = sim_utils.buy(acct, sig, strategy)
+    if not ok:
+        return jsonify({"ok": False, "error": msg}), 400
+    sim_utils.save_account(acct)
+    return jsonify({"ok": True, "message": msg, "position": pos})
+
+
+@app.route("/api/sim/settle", methods=["POST"])
+@login_required
+def api_sim_settle():
+    """手动触发一次结算（收盘后）。"""
+    p = os.path.join(DATA, "cache", "daily_330.json")
+    if not os.path.exists(p):
+        return jsonify({"ok": False, "error": "无日线缓存"}), 400
+    try:
+        cache = json.load(open(p, encoding="utf-8"))
+    except Exception:
+        return jsonify({"ok": False, "error": "日线缓存读取失败"}), 400
+    bars_all = cache.get("bars", {})
+    last_date = max((b[-1][0] for b in bars_all.values() if b), default="")
+    acct = sim_utils.load_account()
+    events = sim_utils.settle(acct, bars_all, last_date)
+    sim_utils.save_account(acct)
+    return jsonify({"ok": True, "date": last_date, "events": events})
 
 
 if __name__ == "__main__":

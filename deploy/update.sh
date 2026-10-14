@@ -10,4 +10,5 @@ $PY tools/fetch_daily.py
 $PY tools/fetch_flow.py
 $PY tools/screen.py
 $PY tools/replay.py
+$PY tools/settle_sim.py
 echo "=== $(date '+%F %T') 更新完成 ==="

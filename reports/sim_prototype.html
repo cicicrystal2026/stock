@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>优选决策台 · 模拟买入</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --ink:#1a2233; --muted:#7a8296;
+    --line:#e7eaf0; --line2:#d5dae4;
+    --brand:#20335e; --brand2:#34507f; --accent:#4a6cf7;
+    --up:#d64541; --upbg:#fdeeee; --down:#1d9e75; --downbg:#eaf6f1;
+    --warn:#c07a1a; --warnbg:#fdf3e3; --gold:#b8860b;
+    --chip:#eef1f6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 24px 60px}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;
+    padding:6px 2px 14px;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#20335e,#4a6cf7);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px}
+  .brand h1{font-size:20px;font-weight:600;letter-spacing:.5px}
+  .brand .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .pill{background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:5px 12px;font-size:12.5px;color:var(--muted)}
+  .pill b{color:var(--ink);font-weight:600}
+  .pill a{color:var(--accent);text-decoration:none;font-weight:500}
+  .pill.live{color:var(--down);border-color:#bfe4d4}
+  .pill.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
+    background:var(--down);margin-right:6px;vertical-align:1px}
+
+  /* 顶部导航 tab */
+  .nav{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px}
+  .nav a{display:block;padding:9px 18px;font-size:14px;color:var(--muted);text-decoration:none;
+    border-bottom:2px solid transparent;font-weight:500}
+  .nav a.on{color:var(--brand);border-bottom-color:var(--accent);font-weight:600}
+  .nav a:hover{color:var(--brand)}
+
+  .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .kpi .label{color:var(--muted);font-size:12.5px;margin-bottom:8px}
+  .kpi .num{font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1}
+  .kpi .num small{font-size:14px;font-weight:500;color:var(--muted);margin-left:2px}
+  .kpi .foot{font-size:12px;color:var(--muted);margin-top:8px}
+  .kpi .num.up{color:var(--up)} .kpi .num.down{color:var(--down)}
+  .kpi .num.zero{color:var(--ink)} .kpi .num.warn{color:var(--warn)}
+  .kpi.accent{border-top:3px solid var(--accent)}
+
+  .cols{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+  @media(max-width:980px){.cols{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;overflow:hidden}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;border-bottom:1px solid var(--line)}
+  .panel-h h2{font-size:15px;font-weight:600}
+  .panel-h .hint{font-size:12px;color:var(--muted)}
+  .panel-b{padding:14px 18px}
+
+  .tag{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:6px}
+  .tag.A{background:#fdeeee;color:var(--up)}
+  .tag.s1{background:#eaf0ff;color:#34507f}
+  .tag.s2{background:#eaf6f1;color:#1d9e75}
+
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+  .badge.hold{background:#eaf0ff;color:#34507f}
+  .badge.protect{background:#fdf3e3;color:#c07a1a}
+  .badge.danger{background:#fdeeee;color:#d64541}
+  .badge.win{background:#eaf6f1;color:#1d9e75}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:right;font-weight:500;color:var(--muted);font-size:12px;
+    padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  td{padding:9px 10px;border-bottom:1px solid #f1f3f7;text-align:right;white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  .code{font-family:"SF Mono",Consolas,monospace;color:var(--muted);font-size:12.5px}
+  .name{font-weight:500}
+  .ind{color:var(--muted);font-size:12px}
+  .up{color:var(--up);font-weight:600} .down{color:var(--down);font-weight:600}
+  .flat{color:var(--muted)}
+
+  .empty{color:var(--muted);font-size:13px;padding:18px 4px;text-align:center}
+  .foot{color:var(--muted);font-size:11.5px;margin-top:18px;text-align:center;line-height:1.7}
+  .section-tip{font-size:12px;color:var(--muted);padding:2px 0 10px}
+
+  /* 模拟买入特有 */
+  .demo{display:flex;align-items:center;gap:8px;background:#f3f0fb;border:1px solid #dcd3f2;
+    color:#6a55b8;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:12px}
+  .demo b{font-weight:600}
+
+  /* 买入信号卡 */
+  .signal{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;
+    background:linear-gradient(180deg,#fffdf7,#fff);border-color:#f0d7a8}
+  .signal .left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .signal .nm{font-size:16px;font-weight:700}
+  .signal .info{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:4px}
+  .signal .info b{color:var(--ink);font-weight:600}
+  .btn{border:none;border-radius:9px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;
+    background:var(--accent);color:#fff;transition:.15s}
+  .btn:hover{background:#3a5ae0}
+  .btn.dim{background:#eef1f6;color:#9aa2b1;cursor:not-allowed}
+  .btn.mini{padding:6px 14px;font-size:12.5px}
+
+  /* 持仓卡：价位轴 */
+  .hold-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+  .hold-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .hold-top .nm{font-size:15.5px;font-weight:700}
+  .hold-top .chg{font-size:15px;font-weight:700}
+  .axis{position:relative;height:34px;background:#f0f2f6;border-radius:7px;margin:14px 0 6px}
+  .axis .zone{position:absolute;top:0;height:100%;border-radius:7px}
+  .axis .stop-zone{left:0;background:#fdeeee}
+  .axis .win-zone{right:0;background:#eaf6f1}
+  .axis .marker{position:absolute;top:-6px;width:3px;height:46px;background:var(--accent);border-radius:2px}
+  .axis .marker::after{content:attr(data-v);position:absolute;top:-20px;left:50%;transform:translateX(-50%);
+    font-size:11px;color:var(--accent);font-weight:700;white-space:nowrap}
+  .axis-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+  .axis-labels .stop{color:var(--up)} .axis-labels .cost{color:var(--muted)} .axis-labels .win{color:var(--down)}
+  .hold-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+  .hold-meta b{color:var(--ink);font-weight:600}
+
+  .rule{font-size:12.5px;line-height:1.9;color:#3a4256}
+  .rule .r-h{font-weight:600;color:var(--brand);margin:8px 0 2px}
+  .rule .r-h:first-child{margin-top:0}
+  .rule code{background:var(--chip);border-radius:4px;padding:1px 6px;font-size:12px;color:#34507f}
+  .rule .todo{color:var(--warn)}
+  .stat-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--line)}
+  .stat-row:last-child{border-bottom:none}
+  .stat-row .k{color:var(--muted)} .stat-row .v{font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo">优</div>
+      <div>
+        <h1>优选决策台</h1>
+        <div class="sub">清风火种 · 模拟买入 ｜ 严格按策略执行止盈止损</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="pill"><b>2026-10-14</b> 周三 · 收盘后</span>
+      <span class="pill live">数据已更新</span>
+      <span class="pill"><a href="#">退出</a></span>
+    </div>
+  </header>
+
+  <div class="nav">
+    <a href="#">每日看板</a>
+    <a href="#" class="on">模拟买入</a>
+    <a href="#">池子管理</a>
+  </div>
+
+  <!-- 账户概览 -->
+  <div class="grid">
+    <div class="card kpi accent">
+      <div class="label">初始资金</div>
+      <div class="num">100,000<small>元</small></div>
+      <div class="foot">每次买入固定 10,000 元</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">总资产</div>
+      <div class="num up">101,436<small>元</small></div>
+      <div class="foot">现金 + 持仓市值</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">累计盈亏</div>
+      <div class="num up">+1,436<small>元</small></div>
+      <div class="foot">含已实现 + 浮动</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">总收益率</div>
+      <div class="num up">+1.44%</div>
+      <div class="foot">相对初始资金</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">当前持仓 / 可用</div>
+      <div class="num">2<small>只</small></div>
+      <div class="foot">可用资金 83,584 元</div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+
+      <!-- 今日买入信号 -->
+      <div class="panel">
+        <div class="panel-h">
+          <h2>今日买入信号（仅 A 档）</h2>
+          <span class="hint">策略一 8/8 · 策略二 5/5 全中才可买</span>
+        </div>
+        <div class="panel-b">
+          <div class="demo">🧪 <span><b>当前为设计稿演示</b> —— 页面结构为真，部分数据为示例（标注「示例」）。今日 A 档真实数量为 <b>0</b>。</span></div>
+
+          <div class="section-tip"><b>A 档 · 严格符合买点</b>（出现后点「买入」，固定 1 万元按收盘价成交）</div>
+          <div class="empty" style="padding:26px 4px">
+            今日无 A 档买入信号。<br>
+            这是正常的——策略一历史 60 日仅触发 6 次，A 档本就低频，等它出现再下手。
+          </div>
+
+          <div class="section-tip" style="margin-top:14px"><b>信号出现时长这样</b>（示例）：</div>
+          <div class="signal">
+            <div class="left">
+              <div>
+                <span class="nm">中微公司</span> <span class="code">688012</span>
+                <span class="tag s1">策略一 · 250日线</span>
+                <div class="info">
+                  <span>收盘 <b>125.40</b></span>
+                  <span>买入价 <b>125.40</b></span>
+                  <span>止损 <b>110.20</b>（250日线-5%）</span>
+                  <span>止盈 <b>163.02</b>（+30% 卖1/3）</span>
+                  <span>量比 <b>2.4</b></span>
+                </div>
+              </div>
+            </div>
+            <button class="btn">买入 10,000 元</button>
+          </div>
+          <div class="signal">
+            <div class="left">
+              <div>
+                <span class="nm">成都先导</span> <span class="code">688222</span>
+                <span class="tag s2">策略二 · 均线多头</span>
+                <div class="info">
+                  <span>收盘 <b>26.30</b></span>
+                  <span>买入价 <b>26.30</b></span>
+                  <span>止损 <b>23.93</b>（巨量日最低）</span>
+                  <span>止盈 <b>31.56</b>（+20% 卖1/3）</span>
+                  <span>量比 <b>2.8</b></span>
+                </div>
+              </div>
+            </div>
+            <button class="btn">买入 10,000 元</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 当前持仓 -->
+      <div class="panel">
+        <div class="panel-h">
+          <h2>当前持仓</h2>
+          <span class="hint">每日收盘自动核算止损 / 止盈 / 成本保护</span>
+        </div>
+        <div class="panel-b">
+
+          <div class="hold-card">
+            <div class="hold-top">
+              <div>
+                <span class="nm">成都先导</span> <span class="code">688222</span>
+                <span class="tag s2">策略二</span>
+                <span class="badge protect">成本保护中</span>
+              </div>
+              <span class="chg up">+12.0%</span>
+            </div>
+            <div class="axis">
+              <div class="zone stop-zone" style="width:28%"></div>
+              <div class="zone win-zone" style="width:22%"></div>
+              <div class="marker" style="left:56%" data-v="26.88"></div>
+            </div>
+            <div class="axis-labels">
+              <span class="stop">止损 24.00<br>(已上移=成本)</span>
+              <span class="cost">成本 24.00</span>
+              <span class="win">止盈 28.80<br>(+20% 卖1/3)</span>
+            </div>
+            <div class="hold-meta">
+              <span>买入 <b>24.00</b> × 400 股 = <b>9,600</b> 元</span>
+              <span>现价 <b>26.88</b></span>
+              <span>市值 <b>10,752</b> 元</span>
+              <span>浮盈 <b class="up">+1,152 元</b></span>
+              <span>持股 <b>3</b> 天</span>
+            </div>
+          </div>
+
+          <div class="hold-card">
+            <div class="hold-top">
+              <div>
+                <span class="nm">义翘神州</span> <span class="code">301047</span>
+                <span class="tag s1">策略一</span>
+                <span class="badge hold">持仓中</span>
+              </div>
+              <span class="chg down">-5.0%</span>
+            </div>
+            <div class="axis">
+              <div class="zone stop-zone" style="width:30%"></div>
+              <div class="zone win-zone" style="width:30%"></div>
+              <div class="marker" style="left:32%" data-v="64.60"></div>
+            </div>
+            <div class="axis-labels">
+              <span class="stop">止损 61.88<br>(-9%)</span>
+              <span class="cost">成本 68.00</span>
+              <span class="win">止盈 81.60<br>(+20%)</span>
+            </div>
+            <div class="hold-meta">
+              <span>买入 <b>68.00</b> × 100 股 = <b>6,800</b> 元</span>
+              <span>现价 <b>64.60</b></span>
+              <span>市值 <b>6,460</b> 元</span>
+              <span>浮亏 <b class="down">-340 元</b></span>
+              <span>持股 <b>2</b> 天</span>
+              <span style="color:var(--warn)">距止损 -4.2%，若收盘跌破 61.88 将自动平仓</span>
+            </div>
+          </div>
+
+          <div class="section-tip">示例数据 · 真实持仓会在你实际买入后出现。</div>
+        </div>
+      </div>
+
+      <!-- 已平仓记录 -->
+      <div class="panel">
+        <div class="panel-h">
+          <h2>已平仓记录</h2>
+          <span class="hint">系统按策略自动触发卖出</span>
+        </div>
+        <div class="panel-b">
+          <table>
+            <thead><tr>
+              <th>标的</th><th>策略</th><th>买入价</th><th>卖出价</th><th>卖出原因</th><th>持股天数</th><th>盈亏</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="name">海通发展</span> <span class="code">603162</span></td>
+                <td><span class="tag s1">策略一</span></td>
+                <td>18.40</td><td>17.44</td>
+                <td><span class="badge danger">止损 -5%</span></td><td>6</td>
+                <td class="down">-5.2%</td>
+              </tr>
+              <tr>
+                <td><span class="name">昭衍新药</span> <span class="code">603127</span></td>
+                <td><span class="tag s2">策略二</span></td>
+                <td>21.60</td><td>25.98</td>
+                <td><span class="badge win">止盈 +20% 卖1/3</span></td><td>9</td>
+                <td class="up">+20.3%</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="section-tip" style="padding-top:10px">示例数据 · 止盈「卖 1/3」后剩余仓位仍按趋势跟踪，直到趋势止盈或止损离场。</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div>
+      <!-- 交易规则 -->
+      <div class="panel">
+        <div class="panel-h"><h2>交易规则（严格按策略）</h2></div>
+        <div class="panel-b">
+          <div class="rule">
+            <div class="r-h">① 买入</div>
+            仅 A 档全中信号；每次 <code>10,000 元</code>，按信号日收盘价成交，股数取 <code>100 股</code> 整数倍。
+
+            <div class="r-h">② 止损</div>
+            <b>策略一</b>：250 日线下方 5%<br>
+            <b>策略二</b>：巨量日最低点 或 -9%，先触发者。
+
+            <div class="r-h">③ 成本保护</div>
+            浮盈 ≥ <code>10%</code> 后，止损自动上移到成本价（不亏本离场）。
+
+            <div class="r-h">④ 止盈</div>
+            <b>策略一</b>：浮盈 <code>+30%</code> 卖 1/3；<br>
+            <b>策略二</b>：浮盈 <code>+20%</code> 卖 1/3；<br>
+            剩余 2/3 按「趋势止盈」跟踪。
+
+            <div class="r-h todo">⑤ 待顾问确认</div>
+            <span class="todo">· 策略一「趋势止盈法」具体规则<br>
+            · 策略二「低点翻倍 / 日线顶部结构」的量化口径<br>
+            · 暂以「收盘跌破 20 日线」占位离场</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 账户统计 -->
+      <div class="panel">
+        <div class="panel-h"><h2>账户统计</h2><span class="hint">示例</span></div>
+        <div class="panel-b">
+          <div class="stat-row"><span class="k">已实现盈亏</span><span class="v up">+1,096 元</span></div>
+          <div class="stat-row"><span class="k">浮动盈亏</span><span class="v up">+812 元</span></div>
+          <div class="stat-row"><span class="k">累计交易</span><span class="v">4 笔</span></div>
+          <div class="stat-row"><span class="k">止盈笔数</span><span class="v">1</span></div>
+          <div class="stat-row"><span class="k">止损笔数</span><span class="v">1</span></div>
+          <div class="stat-row"><span class="k">胜率</span><span class="v">50%</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><h2>设计待确认</h2></div>
+        <div class="panel-b">
+          <div class="section-tip" style="line-height:2">
+            1. 初始资金定 <b>10 万</b>？<br>
+            2. 买入价用 <b>信号日收盘价</b>，还是次日开盘价？<br>
+            3. 手动点「买入」，还是 A 档出现 <b>自动买入</b>？<br>
+            4. 趋势止盈的占位规则（跌破 20 日线）可接受？
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    模拟盘仅作策略验证，成交价/股数按简化规则估算，不构成投资建议。
+  </div>
+</div>
+</body>
+</html>

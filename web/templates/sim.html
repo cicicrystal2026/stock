@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>优选决策台 · 模拟买入</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --ink:#1a2233; --muted:#7a8296;
+    --line:#e7eaf0; --line2:#d5dae4;
+    --brand:#20335e; --brand2:#34507f; --accent:#4a6cf7;
+    --up:#d64541; --upbg:#fdeeee; --down:#1d9e75; --downbg:#eaf6f1;
+    --warn:#c07a1a; --warnbg:#fdf3e3; --gold:#b8860b;
+    --chip:#eef1f6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 24px 60px}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;
+    padding:6px 2px 14px;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#20335e,#4a6cf7);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px}
+  .brand h1{font-size:20px;font-weight:600;letter-spacing:.5px}
+  .brand .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .pill{background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:5px 12px;font-size:12.5px;color:var(--muted)}
+  .pill b{color:var(--ink);font-weight:600}
+  .pill a{color:var(--accent);text-decoration:none;font-weight:500}
+
+  .nav{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px}
+  .nav a{display:block;padding:9px 18px;font-size:14px;color:var(--muted);text-decoration:none;
+    border-bottom:2px solid transparent;font-weight:500}
+  .nav a.on{color:var(--brand);border-bottom-color:var(--accent);font-weight:600}
+  .nav a:hover{color:var(--brand)}
+
+  .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .kpi .label{color:var(--muted);font-size:12.5px;margin-bottom:8px}
+  .kpi .num{font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1}
+  .kpi .num small{font-size:14px;font-weight:500;color:var(--muted);margin-left:2px}
+  .kpi .foot{font-size:12px;color:var(--muted);margin-top:8px}
+  .kpi .num.up{color:var(--up)} .kpi .num.down{color:var(--down)}
+  .kpi .num.zero{color:var(--ink)}
+  .kpi.accent{border-top:3px solid var(--accent)}
+
+  .cols{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+  @media(max-width:980px){.cols{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;overflow:hidden}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;border-bottom:1px solid var(--line)}
+  .panel-h h2{font-size:15px;font-weight:600}
+  .panel-h .hint{font-size:12px;color:var(--muted)}
+  .panel-b{padding:14px 18px}
+
+  .tag{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:6px}
+  .tag.s1{background:#eaf0ff;color:#34507f}
+  .tag.s2{background:#eaf6f1;color:#1d9e75}
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+  .badge.hold{background:#eaf0ff;color:#34507f}
+  .badge.protect{background:#fdf3e3;color:#c07a1a}
+  .badge.partial{background:#eaf6f1;color:#1d9e75}
+  .badge.stop{background:#fdeeee;color:#d64541}
+  .badge.win{background:#eaf6f1;color:#1d9e75}
+  .badge.trend{background:#f3f0fb;color:#6a55b8}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:right;font-weight:500;color:var(--muted);font-size:12px;
+    padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  td{padding:9px 10px;border-bottom:1px solid #f1f3f7;text-align:right;white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  .code{font-family:"SF Mono",Consolas,monospace;color:var(--muted);font-size:12.5px}
+  .name{font-weight:500}
+  .up{color:var(--up);font-weight:600} .down{color:var(--down);font-weight:600}
+  .flat{color:var(--muted)}
+
+  .empty{color:var(--muted);font-size:13px;padding:22px 4px;text-align:center}
+  .foot{color:var(--muted);font-size:11.5px;margin-top:18px;text-align:center;line-height:1.7}
+  .section-tip{font-size:12px;color:var(--muted);padding:2px 0 10px}
+
+  .signal{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    border:1px solid #f0d7a8;border-radius:12px;padding:14px 16px;margin-bottom:10px;
+    background:linear-gradient(180deg,#fffdf7,#fff)}
+  .signal .nm{font-size:16px;font-weight:700}
+  .signal .info{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:5px}
+  .signal .info b{color:var(--ink);font-weight:600}
+  .btn{border:none;border-radius:9px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;
+    background:var(--accent);color:#fff;transition:.15s;white-space:nowrap}
+  .btn:hover{background:#3a5ae0}
+  .btn:disabled{background:#eef1f6;color:#9aa2b1;cursor:not-allowed}
+  .btn.mini{padding:6px 14px;font-size:12.5px}
+
+  .hold-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+  .hold-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .hold-top .nm{font-size:15.5px;font-weight:700}
+  .hold-top .chg{font-size:15px;font-weight:700}
+  .axis{position:relative;height:34px;background:#f0f2f6;border-radius:7px;margin:18px 0 6px}
+  .axis .zone{position:absolute;top:0;height:100%;border-radius:7px}
+  .axis .stop-zone{left:0;background:#fdeeee}
+  .axis .win-zone{right:0;background:#eaf6f1}
+  .axis .marker{position:absolute;top:-7px;width:3px;height:48px;background:var(--accent);border-radius:2px;z-index:2}
+  .axis .marker::after{content:attr(data-v);position:absolute;top:-20px;left:50%;transform:translateX(-50%);
+    font-size:11px;color:var(--accent);font-weight:700;white-space:nowrap}
+  .axis-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+  .axis-labels .stop{color:var(--up)} .axis-labels .cost{color:var(--muted)} .axis-labels .win{color:var(--down)}
+  .hold-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+  .hold-meta b{color:var(--ink);font-weight:600}
+  .hold-meta .warn{color:var(--warn)}
+
+  .rule{font-size:12.5px;line-height:1.9;color:#3a4256}
+  .rule .r-h{font-weight:600;color:var(--brand);margin:8px 0 2px}
+  .rule .r-h:first-child{margin-top:0}
+  .rule code{background:var(--chip);border-radius:4px;padding:1px 6px;font-size:12px;color:#34507f}
+  .rule .todo{color:var(--warn)}
+  .stat-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--line)}
+  .stat-row:last-child{border-bottom:none}
+  .stat-row .k{color:var(--muted)} .stat-row .v{font-weight:600}
+  .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a2233;color:#fff;
+    padding:10px 18px;border-radius:9px;font-size:13px;z-index:99;opacity:0;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo">优</div>
+      <div>
+        <h1>优选决策台</h1>
+        <div class="sub">清风火种 · 模拟买入 ｜ 严格按策略执行止盈止损</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="pill" id="meta-date">—</span>
+      <span class="pill"><a href="{{ url_for('logout') }}">退出</a></span>
+    </div>
+  </header>
+
+  <div class="nav">
+    <a href="{{ url_for('dashboard') }}">每日看板</a>
+    <a href="{{ url_for('sim_page') }}" class="on">模拟买入</a>
+    <a href="{{ url_for('pool_page') }}">池子管理</a>
+  </div>
+
+  <div class="grid" id="kpis"></div>
+
+  <div class="cols">
+    <div>
+      <div class="panel">
+        <div class="panel-h">
+          <h2>今日买入信号（仅 A 档）</h2>
+          <span class="hint" id="signal-hint">加载中…</span>
+        </div>
+        <div class="panel-b" id="signals"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h">
+          <h2>当前持仓</h2>
+          <span class="hint">每日收盘自动核算止损 / 止盈 / 成本保护</span>
+        </div>
+        <div class="panel-b" id="positions"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h">
+          <h2>已平仓记录</h2>
+          <span class="hint">系统按策略自动触发卖出</span>
+        </div>
+        <div class="panel-b" id="closed"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="panel-h"><h2>交易规则（严格按策略）</h2></div>
+        <div class="panel-b">
+          <div class="rule">
+            <div class="r-h">① 买入</div>
+            仅 A 档全中信号；每次 <code>10,000 元</code>，按信号日收盘价成交，股数取 <code>100 股</code> 整数倍（不足 1 手按 1 手）。
+
+            <div class="r-h">② 止损</div>
+            <b>策略一</b>：250 日线下方 5%<br>
+            <b>策略二</b>：巨量日最低点 或 -9%，先触发者。
+
+            <div class="r-h">③ 成本保护</div>
+            浮盈 ≥ <code>10%</code> 后，止损自动上移到成本价。
+
+            <div class="r-h">④ 止盈</div>
+            <b>策略一</b>：浮盈 <code>+30%</code> 卖 1/3；<br>
+            <b>策略二</b>：浮盈 <code>+20%</code> 卖 1/3；<br>
+            剩余 2/3 跌破 <code>20 日线</code> 离场。
+
+            <div class="r-h todo">⑤ 待顾问确认</div>
+            <span class="todo">· 策略一「趋势止盈法」具体规则<br>
+            · 策略二「低点翻倍 / 日线顶部结构」口径<br>
+            · 暂以「收盘跌破 20 日线」占位离场</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><h2>账户统计</h2></div>
+        <div class="panel-b" id="stats"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    模拟盘仅作策略验证，成交价/股数按简化规则估算，不构成投资建议。
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+function numcls(v){ return v > 0 ? 'up' : (v < 0 ? 'down' : 'flat'); }
+function fmtMoney(v){ return Number(v).toLocaleString('zh-CN', {minimumFractionDigits:0, maximumFractionDigits:0}); }
+function fmtPct(v){ return (v>0?'+':'') + Number(v).toFixed(2) + '%'; }
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2200); }
+
+async function load(){
+  const r = await fetch('/api/sim');
+  const d = await r.json();
+  renderKpis(d.summary);
+  renderSignals(d);
+  renderPositions(d.positions);
+  renderClosed(d.closed);
+  renderStats(d.summary);
+  $('#meta-date').innerHTML = d.signal_date ? '<b>'+d.signal_date+'</b> 收盘后' : '—';
+}
+
+function renderKpis(s){
+  const items = [
+    {label:'初始资金', num:fmtMoney(s.initial_capital), small:'元', foot:'每次买入固定 10,000 元', cls:'accent'},
+    {label:'总资产', num:fmtMoney(s.total_assets), small:'元', foot:'现金 + 持仓市值', cls:'', cls2:numcls(s.total_pnl)},
+    {label:'累计盈亏', num:fmtMoney(s.total_pnl), small:'元', foot:'已实现 + 浮动', cls:'', cls2:numcls(s.total_pnl)},
+    {label:'总收益率', num:fmtPct(s.total_return_pct), foot:'相对初始资金', cls:'', cls2:numcls(s.total_return_pct)},
+    {label:'持仓 / 可用', num:s.holding_count, small:'只', foot:'可用 '+fmtMoney(s.cash)+' 元', cls:''},
+  ];
+  $('#kpis').innerHTML = items.map(it =>
+    `<div class="card kpi ${it.cls}"><div class="label">${it.label}</div>
+     <div class="num ${it.cls2||''}">${it.num}${it.small?`<small>${it.small}</small>`:''}</div>
+     <div class="foot">${it.foot}</div></div>`).join('');
+}
+
+function renderSignals(d){
+  const sig = d.signals || [];
+  const held = new Set((d.positions||[]).map(p=>p.code));
+  $('#signal-hint').textContent = '策略一 8/8 · 策略二 5/5 全中才可买';
+  if(!sig.length){
+    $('#signals').innerHTML =
+      `<div class="section-tip"><b>A 档 · 严格符合买点</b></div>
+       <div class="empty">今日无 A 档买入信号。<br>这是正常的——A 档本就低频，等它出现再下手。</div>`;
+    return;
+  }
+  $('#signals').innerHTML = `<div class="section-tip"><b>A 档 · 严格符合买点</b>（点「买入」固定 1 万元按收盘价成交）</div>` +
+    sig.map(s=>{
+      const st = s.strategy===1 ? '策略一 · 250日线' : '策略二 · 均线多头';
+      const tp = s.strategy===1 ? 1.30 : 1.20;
+      const stop = s.stop;
+      const takePrice = (s.close*tp).toFixed(2);
+      const held_this = held.has(s.code);
+      return `<div class="signal">
+        <div>
+          <span class="nm">${s.name}</span> <span class="code">${s.code}</span>
+          <span class="tag ${s.strategy===1?'s1':'s2'}">${st}</span>
+          <div class="info">
+            <span>买入价 <b>${s.close.toFixed(2)}</b></span>
+            <span>止损 <b>${stop.toFixed(2)}</b></span>
+            <span>止盈 <b>${takePrice}</b>（+${s.strategy===1?30:20}% 卖1/3）</span>
+            <span>量比 <b>${s.vratio.toFixed(2)}</b></span>
+            ${s.f62e!==undefined?`<span>主力净流入 <b class="${numcls(s.f62e)}">${(s.f62e>0?'+':'')+s.f62e.toFixed(2)} 亿</b></span>`:''}
+          </div>
+        </div>
+        <button class="btn" ${held_this?'disabled':''} onclick="buy('${s.code}',${s.strategy},this)">
+          ${held_this?'已持有':'买入 10,000 元'}</button>
+      </div>`;
+    }).join('');
+}
+
+async function buy(code, strategy, btn){
+  btn.disabled = true; btn.textContent = '买入中…';
+  const r = await fetch('/api/sim/buy', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({code, strategy})
+  });
+  const d = await r.json();
+  if(d.ok){ toast(d.message + ' · ' + d.position.name + ' ' + d.position.shares + '股'); }
+  else { toast('❌ ' + d.error); }
+  load();
+}
+
+function renderPositions(positions){
+  if(!positions || !positions.length){
+    $('#positions').innerHTML = `<div class="empty">暂无持仓。<br>A 档信号出现并买入后，这里会显示持仓与止损/止盈跟踪。</div>`;
+    return;
+  }
+  $('#positions').innerHTML = positions.map(p=>{
+    const stop = p.stop, tp = p.take_profit_price;
+    const range = tp - stop;
+    let posPct = range > 0 ? (p.price - stop)/range*100 : 50;
+    posPct = Math.max(2, Math.min(98, posPct));
+    // 止损区宽度（成本线位置）
+    const costPos = range > 0 ? Math.max(0, Math.min(100, (p.buy_price - stop)/range*100)) : 50;
+    const winZoneFrom = range > 0 ? Math.max(0, Math.min(100, (tp - p.buy_price)/range*100)) : 0;
+    const winZoneW = 100 - costPos;
+    const st = p.strategy===1 ? 's1' : 's2';
+    const badges = [];
+    if(p.protected) badges.push('<span class="badge protect">成本保护</span>');
+    if(p.partial_done) badges.push('<span class="badge partial">已止盈1/3</span>');
+    badges.push('<span class="badge hold">持仓中</span>');
+    const distStop = (p.price/stop-1)*100;
+    const warn = distStop < 8 ? `<span class="warn">距止损 ${distStop.toFixed(1)}%</span>` : '';
+    return `<div class="hold-card">
+      <div class="hold-top">
+        <div><span class="nm">${p.name}</span> <span class="code">${p.code}</span>
+          <span class="tag ${st}">${p.strategy===1?'策略一':'策略二'}</span> ${badges.join(' ')}</div>
+        <span class="chg ${numcls(p.pnl_pct)}">${fmtPct(p.pnl_pct)}</span>
+      </div>
+      <div class="axis">
+        <div class="zone stop-zone" style="width:${costPos}%"></div>
+        <div class="zone win-zone" style="width:${winZoneW}%"></div>
+        <div class="marker" style="left:${posPct}%" data-v="${p.price.toFixed(2)}"></div>
+      </div>
+      <div class="axis-labels">
+        <span class="stop">止损 ${stop.toFixed(2)}${p.protected?'<br>(已上移=成本)':''}</span>
+        <span class="cost">成本 ${p.buy_price.toFixed(2)}</span>
+        <span class="win">止盈 ${tp.toFixed(2)}<br>(+${(p.take_profit_pct*100)|0}% 卖1/3)</span>
+      </div>
+      <div class="hold-meta">
+        <span>买入 <b>${p.buy_price.toFixed(2)}</b> × ${p.shares} 股 = <b>${fmtMoney(p.cost)}</b> 元</span>
+        <span>现价 <b>${p.price.toFixed(2)}</b></span>
+        <span>市值 <b>${fmtMoney(p.price*p.shares)}</b> 元</span>
+        <span>浮${p.pnl>=0?'盈':'亏'} <b class="${numcls(p.pnl)}">${p.pnl>=0?'+':''}${fmtMoney(p.pnl)} 元</b></span>
+        <span>持股 <b>${p.days}</b> 天</span>
+        ${warn}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderClosed(closed){
+  if(!closed || !closed.length){
+    $('#closed').innerHTML = `<div class="empty">暂无平仓记录。</div>`;
+    return;
+  }
+  const reasonMap = {
+    stop_loss:['止损','stop'],
+    take_profit:['止盈1/3','win'],
+    trend_exit:['趋势离场','trend'],
+  };
+  const rows = closed.slice().reverse().map(c=>{
+    const [rlabel, rcls] = reasonMap[c.reason] || [c.reason,'hold'];
+    return `<tr>
+      <td><span class="name">${c.name}</span> <span class="code">${c.code}</span></td>
+      <td><span class="tag ${c.strategy===1?'s1':'s2'}">策略${c.strategy===1?'一':'二'}</span></td>
+      <td>${c.buy_price.toFixed(2)}</td><td>${c.sell_price.toFixed(2)}</td>
+      <td><span class="badge ${rcls}">${rlabel}${c.type==='partial'?'(卖1/3)':''}</span></td>
+      <td>${c.days}</td>
+      <td class="${numcls(c.pnl)}">${c.pnl>=0?'+':''}${fmtMoney(c.pnl)} 元 (${fmtPct(c.pnl_pct)})</td>
+    </tr>`;
+  }).join('');
+  $('#closed').innerHTML = `<table><thead><tr>
+    <th>标的</th><th>策略</th><th>买入价</th><th>卖出价</th><th>原因</th><th>天数</th><th>盈亏</th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderStats(s){
+  const total = (s.closed_count||0);
+  const winRate = total ? (s.win_count/total*100).toFixed(0) : '—';
+  $('#stats').innerHTML = `
+    <div class="stat-row"><span class="k">已实现盈亏</span><span class="v ${numcls(s.realized_pnl)}">${s.realized_pnl>=0?'+':''}${fmtMoney(s.realized_pnl)} 元</span></div>
+    <div class="stat-row"><span class="k">浮动盈亏</span><span class="v ${numcls(s.float_pnl)}">${s.float_pnl>=0?'+':''}${fmtMoney(s.float_pnl)} 元</span></div>
+    <div class="stat-row"><span class="k">累计交易</span><span class="v">${total} 笔</span></div>
+    <div class="stat-row"><span class="k">止盈笔数</span><span class="v">${s.win_count}</span></div>
+    <div class="stat-row"><span class="k">止损笔数</span><span class="v">${s.loss_count}</span></div>
+    <div class="stat-row"><span class="k">胜率</span><span class="v">${winRate}%</span></div>`;
+}
+
+load();
+</script>
+</body>
+</html>
