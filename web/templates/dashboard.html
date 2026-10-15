@@ -163,7 +163,7 @@
     <div class="card kpi">
       <div class="label">池内主力净流入为正</div>
       <div class="num up">{{ screen.meta.flow_positive }}<small>/{{ screen.meta.flow_total }}</small></div>
-      <div class="foot">约 {{ (screen.meta.flow_positive / screen.meta.flow_total * 100) | round(0) | int }}% 的标的有资金进场</div>
+      <div class="foot">{% if screen.meta.flow_total %}约 {{ (screen.meta.flow_positive / screen.meta.flow_total * 100) | round(0) | int }}% 的标的有资金进场{% else %}今日资金流数据未取到{% endif %}</div>
     </div>
   </div>
 
@@ -289,8 +289,8 @@
               <tr>
                 <td style="text-align:left">{{ st.title }}</td>
                 <td>{{ st.triggers }}</td>
-                <td class="{{ numcls(st.f5.med) if st.f5 else 'flat' }}">{{ "%+.2f"|format(st.f5.med) }}%{% if not st.f5 %}—{% endif %}</td>
-                <td class="{{ numcls((st.f5.win|int) - 50) if st.f5 else 'flat' }}">{{ st.f5.win|int }}%{% if not st.f5 %}—{% endif %}</td>
+                <td class="{{ numcls(st.f5.med) if st.f5 else 'flat' }}">{% if st.f5 %}{{ "%+.2f"|format(st.f5.med) }}%{% else %}—{% endif %}</td>
+                <td class="{{ numcls((st.f5.win|int) - 50) if st.f5 else 'flat' }}">{% if st.f5 %}{{ st.f5.win|int }}%{% else %}—{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>

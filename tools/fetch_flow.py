@@ -59,6 +59,11 @@ for i in range(0, len(codes), BATCH):
     time.sleep(1.0)
 
 date = time.strftime("%Y-%m-%d")
+# 空结果保护：接口异常/非交易时段返回空时，不落盘（保留上一份有效缓存），
+# 且以非零码退出让 update.sh（set -e）中断，避免 screen 用空 flow 生成坏数据。
+if len(result) < len(codes) * 0.5:
+    print(f"[失败] 资金流仅取到 {len(result)}/{len(codes)} 只，疑似接口异常，不写入缓存")
+    sys.exit(1)
 with open(os.path.join(CACHE, f"flow_{date}.json"), "w", encoding="utf-8") as f:
     json.dump(result, f, ensure_ascii=False)
 
